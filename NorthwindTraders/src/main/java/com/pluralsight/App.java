@@ -6,7 +6,7 @@ public class App {
     public static void main(String[] args) {
         String url = "jdbc:mysql://localhost:3306/northwind";
         String username = "root";
-        String password = "umut1453";
+        String password = "123-123-123";
         try {
 
             Connection connection = DriverManager.getConnection(url, username, password);
