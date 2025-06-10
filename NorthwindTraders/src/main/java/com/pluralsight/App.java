@@ -9,23 +9,22 @@ public class App {
         String username = "root";
         String password = "umut1453";
 
-        Connection connection = null;
-        Scanner scanner = new Scanner(System.in);
+        try (Connection connection = DriverManager.getConnection(url, username, password);
+             Scanner scanner = new Scanner(System.in)) {
 
-        try {
-            connection = DriverManager.getConnection(url, username, password);
-            System.out.println("Connected!");
+            System.out.println("Connected to the database successfully!");
 
             int choice;
 
             do {
                 System.out.println("\n--- Main Menu ---");
-                System.out.println("1) List of all products ");
-                System.out.println("2) List of all customers");
+                System.out.println("1) Display all products");
+                System.out.println("2) Display all customers");
+                System.out.println("3) Display all categories");
                 System.out.println("0) Exit");
-                System.out.print("Input: ");
+                System.out.print("Your choice: ");
                 choice = scanner.nextInt();
-                scanner.nextLine();
+                scanner.nextLine(); // clear newline
 
                 switch (choice) {
                     case 1:
@@ -34,27 +33,21 @@ public class App {
                     case 2:
                         displayCustomers(connection);
                         break;
+                    case 3:
+                        displayCategoriesAndProducts(connection, scanner);
+                        break;
                     case 0:
-                        System.out.println("Exiting...");
+                        System.out.println("Exiting the program...");
                         break;
                     default:
-                        System.out.println("Invalid option, please try again.");
+                        System.out.println("Invalid choice. Please try again.");
                 }
 
             } while (choice != 0);
 
         } catch (SQLException e) {
-            System.out.println("Connection Error!");
+            System.out.println("Database connection error!");
             e.printStackTrace();
-        } finally {
-            try {
-                if (connection != null)
-                    connection.close();
-                scanner.close();
-            } catch (SQLException e) {
-                System.out.println("Error 404");
-                e.printStackTrace();
-            }
         }
     }
 
@@ -64,13 +57,13 @@ public class App {
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            System.out.println("\n--- Northwind Items ---");
+            System.out.println("\n--- Northwind Products ---");
             while (resultSet.next()) {
                 System.out.println(resultSet.getString("ProductName"));
             }
 
         } catch (SQLException e) {
-            System.out.println("Error");
+            System.out.println("Error retrieving products.");
             e.printStackTrace();
         }
     }
@@ -81,7 +74,7 @@ public class App {
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            System.out.println("\n---Customer Informations ---");
+            System.out.println("\n--- Customer Information ---");
             while (resultSet.next()) {
                 String name = resultSet.getString("ContactName");
                 String company = resultSet.getString("CompanyName");
@@ -89,12 +82,59 @@ public class App {
                 String country = resultSet.getString("Country");
                 String phone = resultSet.getString("Phone");
 
-                System.out.printf("Name: %s | Company: %s | Town: %s | Country: %s | Phone: %s\n",
+                System.out.printf("Name: %s | Company: %s | City: %s | Country: %s | Phone: %s\n",
                         name, company, city, country, phone);
             }
 
         } catch (SQLException e) {
-            System.out.println("Error.");
+            System.out.println("Error retrieving customer data.");
+            e.printStackTrace();
+        }
+    }
+
+    private static void displayCategoriesAndProducts(Connection connection, Scanner scanner) {
+        String categoryQuery = "SELECT CategoryID, CategoryName FROM categories ORDER BY CategoryID";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(categoryQuery)) {
+
+            System.out.println("\n--- Categories ---");
+            while (rs.next()) {
+                int categoryId = rs.getInt("CategoryID");
+                String categoryName = rs.getString("CategoryName");
+                System.out.printf("%d - %s\n", categoryId, categoryName);
+            }
+
+            System.out.print("\nEnter the Category ID to view its products: ");
+            int selectedCategoryId = scanner.nextInt();
+            scanner.nextLine(); // clear newline
+
+            String productsQuery = "SELECT ProductID, ProductName, UnitPrice, UnitsInStock FROM products WHERE CategoryID = ?";
+
+            try (PreparedStatement pstmt = connection.prepareStatement(productsQuery)) {
+                pstmt.setInt(1, selectedCategoryId);
+
+                try (ResultSet productRs = pstmt.executeQuery()) {
+                    System.out.println("\n--- Products in Selected Category ---");
+                    boolean hasProducts = false;
+                    while (productRs.next()) {
+                        hasProducts = true;
+                        int productId = productRs.getInt("ProductID");
+                        String productName = productRs.getString("ProductName");
+                        double unitPrice = productRs.getDouble("UnitPrice");
+                        int unitsInStock = productRs.getInt("UnitsInStock");
+
+                        System.out.printf("ID: %d | Name: %s | Price: %.2f | Stock: %d\n",
+                                productId, productName, unitPrice, unitsInStock);
+                    }
+                    if (!hasProducts) {
+                        System.out.println("There are no products in this category.");
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error retrieving categories or products.");
             e.printStackTrace();
         }
     }
