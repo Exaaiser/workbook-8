@@ -1,15 +1,22 @@
 package com.pluralsight;
 
+import org.apache.commons.dbcp2.BasicDataSource;
+
 import java.sql.*;
 import java.util.Scanner;
 
 public class App {
-    public static void main(String[] args) {
-        String url = "jdbc:mysql://localhost:3306/northwind";
-        String username = "root";
-        String password = "umut1453";
 
-        try (Connection connection = DriverManager.getConnection(url, username, password);
+    public static void main(String[] args) {
+        BasicDataSource dataSource = new BasicDataSource();
+        dataSource.setUrl("jdbc:mysql://localhost:3306/northwind");
+        dataSource.setUsername("root");
+        dataSource.setPassword("umut1453");
+        dataSource.setMinIdle(5);
+        dataSource.setMaxIdle(10);
+        dataSource.setMaxOpenPreparedStatements(100);
+
+        try (Connection connection = dataSource.getConnection();
              Scanner scanner = new Scanner(System.in)) {
 
             System.out.println("Connected to the database successfully!");
